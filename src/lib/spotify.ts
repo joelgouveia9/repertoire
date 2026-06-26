@@ -24,9 +24,9 @@ const MARKET = "US";
 // Keep the catalog pull snappy. Spotify now 403s the batch endpoints
 // (/tracks?ids=, /albums?ids=) for new apps, so we fetch tracks one-by-one with
 // limited concurrency — these caps keep that bounded.
-const MAX_ALBUMS = 15;
-const MAX_TRACKS = 30;
-const CONCURRENCY = 2;
+const MAX_ALBUMS = 8;
+const MAX_TRACKS = 20;
+const CONCURRENCY = 3;
 
 /** Run `fn` over `items` with at most `n` in flight at once. */
 async function mapPool<T, R>(items: T[], n: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -78,11 +78,13 @@ async function api<T>(path: string, attempt = 0): Promise<T> {
   const token = await getToken();
   const res = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
 
-  // Spotify rate-limits bursts (common from serverless IPs). Respect Retry-After.
-  if ((res.status === 429 || res.status === 503) && attempt < 5) {
+  // Spotify rate-limits bursts (common from serverless IPs). Respect Retry-After,
+  // but fail fast (few short retries) so we return a partial catalog rather than
+  // hanging past the function timeout.
+  if ((res.status === 429 || res.status === 503) && attempt < 2) {
     const retryAfter = Number(res.headers.get("retry-after"));
     const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2 ** attempt * 500;
-    await sleep(Math.min(waitMs, 20000));
+    await sleep(Math.min(waitMs, 5000));
     return api<T>(path, attempt + 1);
   }
   if (res.status === 404) throw new SpotifyError("Not found on Spotify.", "not_found");
@@ -155,12 +157,16 @@ async function fetchArtistCatalog(artistId: string): Promise<Artist> {
   const albumIds: string[] = [];
   let offset = 0;
   while (albumIds.length < MAX_ALBUMS) {
-    const page = await api<{ items: SpAlbum[]; next: string | null }>(
-      `/artists/${artistId}/albums?include_groups=album,single&market=${MARKET}&limit=${ALBUM_PAGE}&offset=${offset}`
-    );
-    albumIds.push(...page.items.map((a) => a.id));
-    if (!page.next) break;
-    offset += ALBUM_PAGE;
+    try {
+      const page = await api<{ items: SpAlbum[]; next: string | null }>(
+        `/artists/${artistId}/albums?include_groups=album,single&market=${MARKET}&limit=${ALBUM_PAGE}&offset=${offset}`
+      );
+      albumIds.push(...page.items.map((a) => a.id));
+      if (!page.next) break;
+      offset += ALBUM_PAGE;
+    } catch {
+      break; // rate-limited mid-pagination — proceed with what we have
+    }
   }
 
   // 2. Gather track IDs from each album (simplified track objects — no ISRC yet).
