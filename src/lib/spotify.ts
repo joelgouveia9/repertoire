@@ -25,7 +25,7 @@ const MARKET = "US";
 // limited concurrency — these caps keep that bounded.
 const MAX_ALBUMS = 25;
 const MAX_TRACKS = 60;
-const CONCURRENCY = 8;
+const CONCURRENCY = 4;
 
 /** Run `fn` over `items` with at most `n` in flight at once. */
 async function mapPool<T, R>(items: T[], n: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -71,9 +71,19 @@ async function getToken(): Promise<string> {
   return cachedToken.value;
 }
 
-async function api<T>(path: string): Promise<T> {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function api<T>(path: string, attempt = 0): Promise<T> {
   const token = await getToken();
   const res = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+
+  // Spotify rate-limits bursts (common from serverless IPs). Respect Retry-After.
+  if ((res.status === 429 || res.status === 503) && attempt < 4) {
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2 ** attempt * 400;
+    await sleep(Math.min(waitMs, 6000));
+    return api<T>(path, attempt + 1);
+  }
   if (res.status === 404) throw new SpotifyError("Not found on Spotify.", "not_found");
   if (!res.ok) throw new SpotifyError(`Spotify API error (${res.status}).`, "api");
   return (await res.json()) as T;

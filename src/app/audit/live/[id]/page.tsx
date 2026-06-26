@@ -6,6 +6,8 @@ import { AuditView } from "@/components/AuditView";
 import { ConnectSpotify } from "@/components/ConnectSpotify";
 
 export const dynamic = "force-dynamic";
+// Pulling a full catalog from Spotify (with rate-limit backoff) can take a while.
+export const maxDuration = 60;
 
 export default async function LiveAuditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
