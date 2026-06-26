@@ -13,6 +13,7 @@ import { ROYALTY_MODEL_NOTE } from "@/lib/royalty-model";
 import { listeners, money, moneyFull } from "@/lib/format";
 import { HealthRing } from "./HealthRing";
 import { SongScorecard } from "./SongScorecard";
+import { CollectionMap } from "./CollectionMap";
 
 const ISSUE_TYPE_LABEL: Record<IssueType, string> = {
   unregistered: "Unregistered songs",
@@ -161,6 +162,8 @@ export function AuditView({ audit }: { audit: ArtistAudit }) {
           </div>
         </aside>
       </div>
+
+      <CollectionMap audit={audit} />
     </>
   );
 }

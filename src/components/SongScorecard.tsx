@@ -10,9 +10,11 @@ import {
   CircleHelp,
   Info,
   ArrowRight,
+  ExternalLink,
 } from "lucide-react";
 import type { RoyaltyStream, SongAudit } from "@/lib/types";
-import { STREAM_LABELS } from "@/lib/registries";
+import { STREAM_LABELS, registry } from "@/lib/registries";
+import { registerLink } from "@/lib/registry-links";
 import { cn, money, moneyFull } from "@/lib/format";
 import { scoreColor } from "./HealthRing";
 
@@ -130,6 +132,27 @@ export function SongScorecard({ audit }: { audit: SongAudit }) {
                           <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                           <span>{issue.recommendation}</span>
                         </div>
+                        {issue.registryIds.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {issue.registryIds.map((id) => {
+                              const r = registry(id);
+                              if (!r) return null;
+                              return (
+                                <a
+                                  key={id}
+                                  href={registerLink(r)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 rounded-md bg-white/5 px-2 py-1 text-[12px] font-medium text-neutral-200 ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/10 hover:text-white"
+                                >
+                                  <span>{r.flag}</span>
+                                  Register with {r.abbr}
+                                  <ExternalLink className="h-3 w-3 opacity-70" />
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </li>

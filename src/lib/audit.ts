@@ -270,7 +270,7 @@ function auditUnverifiedSong(song: Song): SongAudit {
         detail:
           "We have the recording (ISRC) but no linked composition (ISWC). Until the work is matched, no society can reliably pay the songwriter side.",
         recommendation:
-          "Connect your PRO or upload a statement so we can resolve the work and confirm its registrations.",
+          "Register the work with your home PRO to have an ISWC assigned (or add it on MusicBrainz so we can resolve it).",
         moneyAtRisk: round(annual * 0.1),
         registryIds: [],
       })
@@ -289,13 +289,13 @@ function auditUnverifiedSong(song: Song): SongAudit {
         id: `${song.isrc}-unverified-${stream}`,
         severity: "warning",
         type: "unverified",
-        title: `${streamWord(stream)} registration unverified`,
-        detail: `We can't yet confirm whether this recording is registered for ${streamWord(
+        title: `${streamWord(stream)} registration not found`,
+        detail: `We cross-referenced public repertoire and couldn't find a ${streamWord(
           stream
-        )} royalties with ${orgs.map((o) => o.abbr).join(" / ")}. This income is at risk until verified.`,
-        recommendation: `Connect ${orgs[0].abbr} (or upload a royalty statement) to verify ${streamWord(
-          stream
-        )} collection.`,
+        )} registration for this work with ${orgs.map((o) => o.abbr).join(" / ")}. If it isn't registered, this income isn't being collected.`,
+        recommendation: `Register this work with ${orgs[0].abbr}${
+          orgs[1] ? ` or ${orgs[1].abbr}` : ""
+        } to collect ${streamWord(stream)} royalties.`,
         moneyAtRisk: round(annual * STREAM_WEIGHT[stream] * 0.6),
         registryIds: orgs.map((o) => o.id),
       })
