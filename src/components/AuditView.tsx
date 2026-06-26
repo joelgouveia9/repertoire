@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   CircleAlert,
   AlertTriangle,
@@ -5,6 +6,7 @@ import {
   TrendingDown,
   Radio,
   FileText,
+  FileCheck,
   Upload,
 } from "lucide-react";
 import { REGISTRIES, STREAM_LABELS } from "@/lib/registries";
@@ -107,18 +109,29 @@ export function AuditView({ audit }: { audit: ArtistAudit }) {
               <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Song-by-song scorecard</h2>
               <p className="mt-0.5 text-[12px] text-neutral-500">Estimated annual earnings shown per song, at 100% ownership.</p>
             </div>
-            <ExportEarnings
-              artist={artist.name}
-              rows={audit.songAudits.map((s) => ({
-                title: s.song.title,
-                isrc: s.song.isrc,
-                iswc: s.song.iswc,
-                releaseDate: s.song.releaseDate,
-                estAnnualRoyalty: s.song.estAnnualRoyalty,
-                writers: s.song.expectedWriters.map((w) => w.name).join("; "),
-                moneyAtRisk: s.moneyAtRisk,
-              }))}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              {artist.live && (
+                <Link
+                  href={`/verify?artist=${artist.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-[13px] font-medium text-emerald-200 ring-1 ring-inset ring-emerald-500/25 transition-colors hover:bg-emerald-500/25"
+                >
+                  <FileCheck className="h-3.5 w-3.5" />
+                  Verify with your statement
+                </Link>
+              )}
+              <ExportEarnings
+                artist={artist.name}
+                rows={audit.songAudits.map((s) => ({
+                  title: s.song.title,
+                  isrc: s.song.isrc,
+                  iswc: s.song.iswc,
+                  releaseDate: s.song.releaseDate,
+                  estAnnualRoyalty: s.song.estAnnualRoyalty,
+                  writers: s.song.expectedWriters.map((w) => w.name).join("; "),
+                  moneyAtRisk: s.moneyAtRisk,
+                }))}
+              />
+            </div>
           </div>
           <div className="flex flex-col gap-2.5">
             {audit.songAudits
