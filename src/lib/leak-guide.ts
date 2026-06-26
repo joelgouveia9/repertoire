@@ -119,11 +119,11 @@ export const LEAK_GUIDE: Record<IssueType, LeakGuide> = {
     ],
   },
   unverified: {
-    summary: "We found the recording but couldn't confirm it's registered — likely uncollected income.",
+    summary: "We found the recording but haven't verified its registration with the societies — worth checking.",
     what:
-      "We pulled the recording from streaming and cross-referenced public repertoire, but couldn't find a matching registration with the relevant societies.",
+      "We pulled the recording (and its ISRC) from streaming, but we have NOT verified whether it's registered with the relevant societies. We don't query PROs directly yet — their public databases block automated access — so these are items to check, not confirmed gaps.",
     why:
-      "If the work genuinely isn't registered, that income isn't being collected. If it is, you simply need to confirm where — but the gap is exactly where money quietly goes missing.",
+      "If the work genuinely isn't registered, that income isn't being collected. If it is, you just need to confirm it. Either way, unverified registrations are exactly where money quietly goes missing — and the only way to know for sure today is your own statements or a PRO login.",
     how: [
       "Use the Register links on each song to register the work and recording with the named societies.",
       "Search each society's public repertoire for the work to confirm whether it already exists.",

@@ -92,6 +92,12 @@ export interface Song {
   estAnnualRoyalty: number;
   /** Spotify popularity 0–100, when sourced live (used by the royalty model). */
   popularity?: number;
+  /**
+   * A real signal of a possible mis-registration found in PUBLIC metadata
+   * (e.g. MusicBrainz links the recording to multiple compositions, or the work
+   * carries multiple ISWCs). Not a PRO check — a public-data red flag.
+   */
+  metadataIssue?: string;
 }
 
 export interface Artist {

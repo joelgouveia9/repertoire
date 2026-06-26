@@ -259,6 +259,23 @@ function auditUnverifiedSong(song: Song): SongAudit {
     isrc: song.isrc,
   });
 
+  // Real mis-registration red flag from public metadata (MusicBrainz).
+  if (song.metadataIssue) {
+    issues.push(
+      mk({
+        id: `${song.isrc}-misreg`,
+        severity: "warning",
+        type: "conflict",
+        title: "Possible incorrect or duplicate registration",
+        detail: song.metadataIssue,
+        recommendation:
+          "Verify the work's registration with your PRO/MRO and consolidate or correct any duplicate or conflicting entries.",
+        moneyAtRisk: round(annual * 0.15),
+        registryIds: [],
+      })
+    );
+  }
+
   // No resolved composition ID — common for recording-only data.
   if (!song.iswc) {
     issues.push(
@@ -289,13 +306,15 @@ function auditUnverifiedSong(song: Song): SongAudit {
         id: `${song.isrc}-unverified-${stream}`,
         severity: "warning",
         type: "unverified",
-        title: `${streamWord(stream)} registration not found`,
-        detail: `We cross-referenced public repertoire and couldn't find a ${streamWord(
+        title: `${streamWord(stream)} registration not verified`,
+        detail: `We haven't confirmed whether this work is registered for ${streamWord(
           stream
-        )} registration for this work with ${orgs.map((o) => o.abbr).join(" / ")}. If it isn't registered, this income isn't being collected.`,
-        recommendation: `Register this work with ${orgs[0].abbr}${
-          orgs[1] ? ` or ${orgs[1].abbr}` : ""
-        } to collect ${streamWord(stream)} royalties.`,
+        )} royalties with ${orgs
+          .map((o) => o.abbr)
+          .join(" / ")}. We don't query PROs directly yet, so this needs checking — if it isn't registered, the income isn't being collected.`,
+        recommendation: `Check your ${orgs[0].abbr} account${
+          orgs[1] ? ` (or ${orgs[1].abbr})` : ""
+        }, and register the work if it's missing, to collect ${streamWord(stream)} royalties.`,
         moneyAtRisk: round(annual * STREAM_WEIGHT[stream] * 0.6),
         registryIds: orgs.map((o) => o.id),
       })

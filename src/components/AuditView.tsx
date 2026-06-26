@@ -17,6 +17,7 @@ import { SongScorecard } from "./SongScorecard";
 import { CollectionMap } from "./CollectionMap";
 import { LeakExplainers } from "./LeakExplainers";
 import { ExportEarnings } from "./ExportEarnings";
+import { Methodology } from "./Methodology";
 
 const GROUND_TRUTH_LABEL: Record<GroundTruthSource, { icon: React.ReactNode; label: string }> = {
   distributor: { icon: <Radio className="h-3.5 w-3.5" />, label: "Distributor metadata" },
@@ -95,6 +96,8 @@ export function AuditView({ audit }: { audit: ArtistAudit }) {
         <Stat tone="amber" icon={<AlertTriangle className="h-4 w-4" />} label="Warnings" value={`${audit.counts.warning}`} sub="worth fixing" />
         <Stat tone="emerald" icon={<CircleCheck className="h-4 w-4" />} label="Clean songs" value={`${audit.counts.fullyClean} / ${audit.counts.songs}`} sub="fully registered" />
       </section>
+
+      <Methodology />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_300px]">
         {/* Songs */}

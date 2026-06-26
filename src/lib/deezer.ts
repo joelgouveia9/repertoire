@@ -101,7 +101,7 @@ export async function searchArtists(query: string, limit = 10): Promise<ArtistHi
 
 /** Pull an artist's full catalog from Deezer, mapped into our audit model. Cached 1h. */
 export function getArtistCatalog(id: string): Promise<Artist> {
-  return unstable_cache(() => fetchArtistCatalog(id), ["dz-catalog-v3-rank", id], { revalidate: 3600 })();
+  return unstable_cache(() => fetchArtistCatalog(id), ["dz-catalog-v4-misreg", id], { revalidate: 3600 })();
 }
 
 async function fetchArtistCatalog(id: string): Promise<Artist> {
@@ -163,6 +163,7 @@ async function fetchArtistCatalog(id: string): Promise<Artist> {
     if (info) {
       if (info.iswc) s.iswc = info.iswc;
       if (info.writers.length) s.expectedWriters = info.writers;
+      if (info.issue) s.metadataIssue = info.issue;
     }
   }
 
