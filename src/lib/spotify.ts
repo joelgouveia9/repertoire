@@ -20,9 +20,26 @@ const TOKEN_URL = "https://accounts.spotify.com/api/token";
 const API = "https://api.spotify.com/v1";
 const MARKET = "US";
 
-// Keep the catalog pull snappy.
-const MAX_ALBUMS = 40;
-const MAX_TRACKS = 120;
+// Keep the catalog pull snappy. Spotify now 403s the batch endpoints
+// (/tracks?ids=, /albums?ids=) for new apps, so we fetch tracks one-by-one with
+// limited concurrency — these caps keep that bounded.
+const MAX_ALBUMS = 25;
+const MAX_TRACKS = 60;
+const CONCURRENCY = 8;
+
+/** Run `fn` over `items` with at most `n` in flight at once. */
+async function mapPool<T, R>(items: T[], n: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let i = 0;
+  async function worker() {
+    while (i < items.length) {
+      const idx = i++;
+      results[idx] = await fn(items[idx]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, worker));
+  return results;
+}
 
 export function spotifyConfigured(): boolean {
   return Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET);
@@ -69,7 +86,7 @@ interface SpAlbum { id: string; name: string; release_date: string; album_group?
 interface SpTrack {
   id: string;
   name: string;
-  popularity: number;
+  popularity?: number | null; // nulled on restricted API tiers
   external_ids?: { isrc?: string };
   album?: { release_date?: string };
 }
@@ -111,50 +128,52 @@ export async function getArtistCatalog(artistId: string): Promise<Artist> {
   const artist = await api<SpArtist>(`/artists/${artistId}`);
 
   // 1. Collect albums + singles (paginated).
+  // NOTE: Spotify's /artists/{id}/albums endpoint now caps `limit` at ~10
+  // (it 400s "Invalid limit" above that), so we page in small batches.
+  const ALBUM_PAGE = 10;
   const albumIds: string[] = [];
   let offset = 0;
   while (albumIds.length < MAX_ALBUMS) {
     const page = await api<{ items: SpAlbum[]; next: string | null }>(
-      `/artists/${artistId}/albums?include_groups=album,single&market=${MARKET}&limit=50&offset=${offset}`
+      `/artists/${artistId}/albums?include_groups=album,single&market=${MARKET}&limit=${ALBUM_PAGE}&offset=${offset}`
     );
     albumIds.push(...page.items.map((a) => a.id));
     if (!page.next) break;
-    offset += 50;
+    offset += ALBUM_PAGE;
   }
 
   // 2. Gather track IDs from each album (simplified track objects — no ISRC yet).
-  const trackIds: string[] = [];
-  for (const albumId of albumIds.slice(0, MAX_ALBUMS)) {
-    if (trackIds.length >= MAX_TRACKS) break;
-    const tracks = await api<{ items: { id: string }[] }>(`/albums/${albumId}/tracks?market=${MARKET}&limit=50`);
-    trackIds.push(...tracks.items.map((t) => t.id));
-  }
+  const albumTrackLists = await mapPool(albumIds.slice(0, MAX_ALBUMS), CONCURRENCY, (albumId) =>
+    api<{ items: { id: string }[] }>(`/albums/${albumId}/tracks?market=${MARKET}&limit=50`).catch(() => ({ items: [] }))
+  );
+  const trackIds = [...new Set(albumTrackLists.flatMap((t) => t.items.map((i) => i.id)))].slice(0, MAX_TRACKS);
 
-  // 3. Hydrate full track objects in batches of 50 to get ISRC + popularity.
+  // 3. Hydrate each track individually (batch /tracks?ids= is 403-restricted) to
+  //    get ISRC + popularity.
+  const followers = artist.followers?.total ?? 0;
+  const fullTracks = await mapPool(trackIds, CONCURRENCY, (id) =>
+    api<SpTrack>(`/tracks/${id}?market=${MARKET}`).catch(() => null)
+  );
+
   const songs: Song[] = [];
   const seenIsrc = new Set<string>();
-  const ids = [...new Set(trackIds)].slice(0, MAX_TRACKS);
-  for (let i = 0; i < ids.length; i += 50) {
-    const batch = ids.slice(i, i + 50);
-    const { tracks } = await api<{ tracks: SpTrack[] }>(`/tracks?market=${MARKET}&ids=${batch.join(",")}`);
-    for (const t of tracks) {
-      const isrc = t.external_ids?.isrc;
-      if (!isrc || seenIsrc.has(isrc)) continue; // de-dupe re-releases by recording
-      seenIsrc.add(isrc);
-      songs.push({
-        title: t.name,
-        isrc,
-        spotifyId: t.id,
-        releaseDate: t.album?.release_date,
-        territories: ["United States"], // assumed home market; refined when artist confirms
-        expectedWriters: [], // Spotify doesn't expose writers/splits — the core gap
-        expectedPublishers: [],
-        registrations: [],
-        registrationsKnown: false, // we see the recording, not its registrations
-        popularity: t.popularity,
-        estAnnualRoyalty: estimateAnnualRoyalty(t.popularity, artist.followers?.total ?? 0),
-      });
-    }
+  for (const t of fullTracks) {
+    const isrc = t?.external_ids?.isrc;
+    if (!t || !isrc || seenIsrc.has(isrc)) continue; // de-dupe re-releases by recording
+    seenIsrc.add(isrc);
+    songs.push({
+      title: t.name,
+      isrc,
+      spotifyId: t.id,
+      releaseDate: t.album?.release_date,
+      territories: ["United States"], // assumed home market; refined when artist confirms
+      expectedWriters: [], // Spotify doesn't expose writers/splits — the core gap
+      expectedPublishers: [],
+      registrations: [],
+      registrationsKnown: false, // we see the recording, not its registrations
+      popularity: t.popularity ?? undefined,
+      estAnnualRoyalty: estimateAnnualRoyalty(t.popularity, followers),
+    });
   }
 
   // Most relevant first.

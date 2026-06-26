@@ -22,27 +22,49 @@ const PER_STREAM_USD = 0.0038;
 const NON_STREAMING_UPLIFT = 1.18;
 
 /**
+ * Popularity assumed when Spotify doesn't expose it for the app's API tier
+ * (newer apps get `popularity`/`followers` nulled). Picks a modest mid-catalog
+ * baseline so estimates stay sane and never NaN.
+ */
+const BASELINE_POPULARITY = 42;
+
+const finite = (n: number | null | undefined, fallback: number): number =>
+  typeof n === "number" && Number.isFinite(n) ? n : fallback;
+
+/**
  * Estimate a single track's annual streams from Spotify signals.
  * Popularity is the dominant signal (it already reflects recent play velocity);
  * followers provide a floor so catalog tracks from large artists aren't zeroed out.
+ * Both inputs may be null (restricted API tier) — we fall back to a baseline.
  */
-export function estimateAnnualStreams(popularity: number, followers = 0): number {
-  const pop = Math.max(0, Math.min(100, popularity));
+export function estimateAnnualStreams(
+  popularity: number | null | undefined,
+  followers: number | null | undefined = 0
+): number {
+  const pop = Math.max(0, Math.min(100, finite(popularity, BASELINE_POPULARITY)));
   // Nonlinear: popularity is roughly logarithmic in real plays. (pop/10)^3 gives
   // a smooth curve — pop 30 ≈ 26k/yr, pop 50 ≈ 120k/yr, pop 70 ≈ 329k/yr, pop 85 ≈ 590k/yr.
   const monthlyFromPop = Math.pow(pop / 10, 3) * 100;
   // Follower floor: even low-popularity catalog tracks get a small base from fanbase.
-  const monthlyFloor = followers * 0.02;
+  const monthlyFloor = finite(followers, 0) * 0.02;
   const monthly = Math.max(monthlyFromPop, monthlyFloor);
   return Math.round(monthly * 12);
 }
 
 /** Estimate a track's total annual collectible royalty across all streams (USD). */
-export function estimateAnnualRoyalty(popularity: number, followers = 0): number {
+export function estimateAnnualRoyalty(
+  popularity: number | null | undefined,
+  followers: number | null | undefined = 0
+): number {
   const annualStreams = estimateAnnualStreams(popularity, followers);
   return Math.round(annualStreams * PER_STREAM_USD * NON_STREAMING_UPLIFT);
 }
 
+/** True when Spotify exposed real play signals (vs. us applying a baseline). */
+export function hasPlaySignal(popularity: number | null | undefined): boolean {
+  return typeof popularity === "number" && Number.isFinite(popularity) && popularity > 0;
+}
+
 /** Human-readable note explaining the estimate, for tooltips/disclaimers. */
 export const ROYALTY_MODEL_NOTE =
-  "Estimated from Spotify popularity and follower data using blended per-stream payout rates (~$0.0038/stream). Directional only — connect royalty statements for exact figures.";
+  "Royalty figures are directional estimates using blended per-stream payout rates (~$0.0038/stream). When Spotify doesn't expose play counts for the API tier, a conservative per-track baseline is applied. Connect royalty statements for exact figures.";
