@@ -37,7 +37,7 @@ export default function Home() {
             <Search className="h-4 w-4 text-neutral-500" />
             <input
               name="q"
-              placeholder="Search an artist or paste a Spotify link…"
+              placeholder="Search any artist…"
               className="w-full bg-transparent text-[15px] text-white outline-none placeholder:text-neutral-600"
             />
           </div>
@@ -65,7 +65,7 @@ export default function Home() {
           icon={<Search className="h-5 w-5" />}
           step="01"
           title="Pull the catalog"
-          body="We take an artist's recordings and their ISRCs straight from streaming, then resolve each to its underlying composition (ISWC)."
+          body="We take an artist's recordings and their ISRCs from the public catalog, then resolve each to its underlying composition (ISWC)."
         />
         <HowCard
           icon={<Globe2 className="h-5 w-5" />}

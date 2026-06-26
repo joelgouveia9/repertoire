@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getArtistCatalog, SpotifyError } from "@/lib/spotify";
+import { getArtistCatalog, CatalogError } from "@/lib/musicbrainz";
 import { auditArtist } from "@/lib/audit";
 import { AuditView } from "@/components/AuditView";
-import { ConnectSpotify } from "@/components/ConnectSpotify";
 
 export const dynamic = "force-dynamic";
-// Pulling a full catalog from Spotify (with rate-limit backoff) can take a while.
+// Pulling a full catalog from MusicBrainz can take a moment.
 export const maxDuration = 60;
 
 export default async function LiveAuditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,25 +18,15 @@ export default async function LiveAuditPage({ params }: { params: Promise<{ id: 
       body = (
         <p className="mt-8 rounded-xl border border-white/8 bg-white/[0.02] p-6 text-sm text-neutral-400">
           We found <span className="text-white">{artist.name}</span> but couldn&apos;t read any recordings with
-          ISRCs from Spotify. Try another artist.
+          ISRCs in the public catalog. Try another artist.
         </p>
       );
     } else {
       body = <AuditView audit={auditArtist(artist)} />;
     }
   } catch (e) {
-    if (e instanceof SpotifyError && e.code === "no_creds") {
-      body = (
-        <div className="mt-8">
-          <ConnectSpotify />
-        </div>
-      );
-    } else {
-      const msg = e instanceof SpotifyError ? e.message : "Something went wrong loading this artist.";
-      body = (
-        <p className="mt-8 rounded-xl border border-rose-500/20 bg-rose-500/5 p-6 text-sm text-rose-300">{msg}</p>
-      );
-    }
+    const msg = e instanceof CatalogError ? e.message : "Something went wrong loading this artist.";
+    body = <p className="mt-8 rounded-xl border border-rose-500/20 bg-rose-500/5 p-6 text-sm text-rose-300">{msg}</p>;
   }
 
   return (

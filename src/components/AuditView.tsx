@@ -48,12 +48,12 @@ export function AuditView({ audit }: { audit: ArtistAudit }) {
       {/* Header */}
       <section className="mt-5 flex flex-col gap-6 rounded-2xl border border-white/8 bg-white/[0.02] p-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-white/10 to-white/5 text-4xl ring-1 ring-white/10">
+          <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-white/10 to-white/5 text-3xl font-semibold text-neutral-300 ring-1 ring-white/10">
             {artist.image && artist.image.startsWith("http") ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={artist.image} alt={artist.name} className="h-full w-full object-cover" />
             ) : (
-              artist.image
+              artist.image || artist.name.charAt(0).toUpperCase()
             )}
           </span>
           <div>
@@ -80,7 +80,7 @@ export function AuditView({ audit }: { audit: ArtistAudit }) {
               )}
               {artist.live && (
                 <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300">
-                  ● Live from Spotify
+                  ● Live from {artist.source ?? "public catalog"}
                 </span>
               )}
             </div>

@@ -106,8 +106,10 @@ export interface Artist {
   followers?: number;
   /** Where the song-level "expected" data came from. */
   groundTruth?: GroundTruthSource;
-  /** True when the catalog was pulled live from Spotify (vs. seeded demo data). */
+  /** True when the catalog was pulled live from a public source (vs. seeded demo data). */
   live?: boolean;
+  /** Name of the live catalog source, e.g. "MusicBrainz". */
+  source?: string;
   songs: Song[];
 }
 

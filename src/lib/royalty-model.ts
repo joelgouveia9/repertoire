@@ -67,4 +67,4 @@ export function hasPlaySignal(popularity: number | null | undefined): boolean {
 
 /** Human-readable note explaining the estimate, for tooltips/disclaimers. */
 export const ROYALTY_MODEL_NOTE =
-  "Royalty figures are directional estimates using blended per-stream payout rates (~$0.0038/stream). When Spotify doesn't expose play counts for the API tier, a conservative per-track baseline is applied. Connect royalty statements for exact figures.";
+  "Royalty figures are directional estimates using blended per-stream payout rates (~$0.0038/stream) and a conservative per-track baseline where play data isn't available. Connect royalty statements for exact figures.";
