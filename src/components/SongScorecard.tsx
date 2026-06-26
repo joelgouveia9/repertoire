@@ -140,8 +140,8 @@ export function SongScorecard({ audit }: { audit: SongAudit }) {
 
           {/* Who's on file — the trace */}
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <TraceBlock title="Writers (you say)" parties={song.expectedWriters} />
-            <TraceBlock title="Publishers (you say)" parties={song.expectedPublishers} />
+            <TraceBlock title="Songwriters" parties={song.expectedWriters} />
+            <TraceBlock title="Publishers" parties={song.expectedPublishers} />
           </div>
         </div>
       )}
@@ -156,13 +156,16 @@ function TraceBlock({
   title: string;
   parties: { name: string; sharePct?: number; ipi?: string }[];
 }) {
+  // Only show a percentage total when splits are actually known (demo/statement
+  // data has them; MusicBrainz-resolved writers don't carry percentages).
+  const hasPct = parties.some((p) => p.sharePct != null);
   const total = parties.reduce((s, p) => s + (p.sharePct ?? 0), 0);
-  const off = parties.length > 0 && Math.abs(total - 100) > 0.01;
+  const off = hasPct && Math.abs(total - 100) > 0.01;
   return (
     <div className="rounded-lg bg-black/30 p-3 ring-1 ring-white/5">
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">{title}</span>
-        {parties.length > 0 && (
+        {hasPct && (
           <span className={cn("text-[11px] font-semibold tabular-nums", off ? "text-rose-300" : "text-neutral-500")}>
             {total}%
           </span>

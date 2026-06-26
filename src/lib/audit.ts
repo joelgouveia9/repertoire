@@ -302,9 +302,32 @@ function auditUnverifiedSong(song: Song): SongAudit {
     );
   }
 
+  // Positive signal: we traced the recording to its composition from public data.
+  if (song.iswc || song.expectedWriters.length > 0) {
+    const names = song.expectedWriters.map((w) => w.name);
+    const writerPart =
+      names.length > 0 ? ` to ${names.length} songwriter${names.length > 1 ? "s" : ""}` : "";
+    issues.push(
+      mk({
+        id: `${song.isrc}-resolved`,
+        severity: "info",
+        type: "unverified",
+        title: `Composition traced${writerPart}`,
+        detail: `Resolved this recording to its composition${
+          song.iswc ? ` (ISWC ${song.iswc})` : ""
+        }${names.length ? `, written by ${names.join(", ")}` : ""} — from public data, no PRO access needed. Registration still needs verifying.`,
+        recommendation: "Confirm these writers and their splits, then verify each PRO registration.",
+        moneyAtRisk: 0,
+        registryIds: [],
+      })
+    );
+  }
+
   const moneyAtRisk = Math.min(annual, sum(issues.map((i) => i.moneyAtRisk)));
-  // Unverified ≠ broken: a neutral-ish score reflecting "unknown, needs connecting".
-  const score = Math.max(35, 60 - issues.filter((i) => i.type === "unverified").length * 4);
+  // Unverified ≠ broken. Tracing the composition lifts the score above bare "unknown".
+  const unverifiedCount = issues.filter((i) => i.type === "unverified" && i.severity !== "info").length;
+  const traced = song.iswc || song.expectedWriters.length > 0 ? 12 : 0;
+  const score = Math.max(35, 60 - unverifiedCount * 4 + traced);
   return { song, score, issues, coverage, moneyAtRisk };
 }
 
