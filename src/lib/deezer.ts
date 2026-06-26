@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import type { Artist, Song } from "./types";
-import { estimateAnnualRoyalty } from "./royalty-model";
+import { estimateAnnualRoyaltyFromRank } from "./royalty-model";
 import { enrichByIsrc } from "./musicbrainz";
 import { inferTerritory } from "./territory";
 import { CatalogError, pool, sleep } from "./source-util";
@@ -64,6 +64,7 @@ interface DzTrack {
   title: string;
   isrc?: string;
   release_date?: string;
+  rank?: number; // Deezer popularity score per track — drives per-song estimates
 }
 
 // ── Public surface ───────────────────────────────────────────────────────────
@@ -100,7 +101,7 @@ export async function searchArtists(query: string, limit = 10): Promise<ArtistHi
 
 /** Pull an artist's full catalog from Deezer, mapped into our audit model. Cached 1h. */
 export function getArtistCatalog(id: string): Promise<Artist> {
-  return unstable_cache(() => fetchArtistCatalog(id), ["dz-catalog-v1", id], { revalidate: 3600 })();
+  return unstable_cache(() => fetchArtistCatalog(id), ["dz-catalog-v3-rank", id], { revalidate: 3600 })();
 }
 
 async function fetchArtistCatalog(id: string): Promise<Artist> {
@@ -142,7 +143,8 @@ async function fetchArtistCatalog(id: string): Promise<Artist> {
         expectedPublishers: [],
         registrations: [],
         registrationsKnown: false,
-        estAnnualRoyalty: estimateAnnualRoyalty(null, null),
+        popularity: t.rank,
+        estAnnualRoyalty: estimateAnnualRoyaltyFromRank(t.rank),
       });
     }
   }

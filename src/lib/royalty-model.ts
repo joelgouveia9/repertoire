@@ -60,6 +60,35 @@ export function estimateAnnualRoyalty(
   return Math.round(annualStreams * PER_STREAM_USD * NON_STREAMING_UPLIFT);
 }
 
+// ── Per-song estimation from Deezer's track `rank` (0 … ~1,000,000) ───────────
+//
+// `rank` is Deezer's popularity score per track — far more granular than a flat
+// baseline, so it lets us estimate EACH song individually. Deezer's rank scale is
+// compressed, so we deliberately calibrate CONSERVATIVELY to avoid overstating
+// indie earnings:
+//   rank    9k →  ~$20/yr     (tiny release)
+//   rank   33k →  ~$200/yr    (modest indie track)
+//   rank  100k →  ~$1.6k/yr   (regional traction)
+//   rank  985k →  ~$120k/yr   (global smash)
+// then apply the same blended per-stream payout. Directional, not exact — real
+// figures come from connected royalty statements.
+const RANK_COEFF = 1.36e-4;
+const RANK_EXP = 1.885;
+
+export function estimateAnnualStreamsFromRank(rank: number | null | undefined): number {
+  const r = finite(rank, 0);
+  if (r <= 0) return 0;
+  return Math.round(RANK_COEFF * Math.pow(r, RANK_EXP));
+}
+
+/** Estimate a single track's annual royalty (at 100% ownership) from its Deezer rank. */
+export function estimateAnnualRoyaltyFromRank(rank: number | null | undefined): number {
+  const streams = estimateAnnualStreamsFromRank(rank);
+  if (streams <= 0) return 0;
+  // Floor at a few dollars so a genuinely-released-but-tiny track isn't shown as $0.
+  return Math.max(5, Math.round(streams * PER_STREAM_USD * NON_STREAMING_UPLIFT));
+}
+
 /** True when Spotify exposed real play signals (vs. us applying a baseline). */
 export function hasPlaySignal(popularity: number | null | undefined): boolean {
   return typeof popularity === "number" && Number.isFinite(popularity) && popularity > 0;

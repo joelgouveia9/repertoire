@@ -68,7 +68,8 @@ export function SongScorecard({ audit }: { audit: SongAudit }) {
           <div className="mt-0.5 flex items-center gap-2 text-[12px] text-neutral-500">
             <span className="font-mono">{song.isrc}</span>
             <span>·</span>
-            <span>{moneyFull(song.estAnnualRoyalty)}/yr est.</span>
+            <span className="text-neutral-400">{moneyFull(song.estAnnualRoyalty)}/yr</span>
+            <span className="text-neutral-600">at 100%</span>
           </div>
         </div>
 

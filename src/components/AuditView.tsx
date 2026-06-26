@@ -16,6 +16,7 @@ import { HealthRing } from "./HealthRing";
 import { SongScorecard } from "./SongScorecard";
 import { CollectionMap } from "./CollectionMap";
 import { LeakExplainers } from "./LeakExplainers";
+import { ExportEarnings } from "./ExportEarnings";
 
 const GROUND_TRUTH_LABEL: Record<GroundTruthSource, { icon: React.ReactNode; label: string }> = {
   distributor: { icon: <Radio className="h-3.5 w-3.5" />, label: "Distributor metadata" },
@@ -98,7 +99,24 @@ export function AuditView({ audit }: { audit: ArtistAudit }) {
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_300px]">
         {/* Songs */}
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Song-by-song scorecard</h2>
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Song-by-song scorecard</h2>
+              <p className="mt-0.5 text-[12px] text-neutral-500">Estimated annual earnings shown per song, at 100% ownership.</p>
+            </div>
+            <ExportEarnings
+              artist={artist.name}
+              rows={audit.songAudits.map((s) => ({
+                title: s.song.title,
+                isrc: s.song.isrc,
+                iswc: s.song.iswc,
+                releaseDate: s.song.releaseDate,
+                estAnnualRoyalty: s.song.estAnnualRoyalty,
+                writers: s.song.expectedWriters.map((w) => w.name).join("; "),
+                moneyAtRisk: s.moneyAtRisk,
+              }))}
+            />
+          </div>
           <div className="flex flex-col gap-2.5">
             {audit.songAudits
               .slice()
