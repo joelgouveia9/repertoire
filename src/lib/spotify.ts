@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import type { Artist, Song } from "./types";
 import { estimateAnnualRoyalty } from "./royalty-model";
 
@@ -23,9 +24,9 @@ const MARKET = "US";
 // Keep the catalog pull snappy. Spotify now 403s the batch endpoints
 // (/tracks?ids=, /albums?ids=) for new apps, so we fetch tracks one-by-one with
 // limited concurrency — these caps keep that bounded.
-const MAX_ALBUMS = 25;
-const MAX_TRACKS = 60;
-const CONCURRENCY = 4;
+const MAX_ALBUMS = 15;
+const MAX_TRACKS = 30;
+const CONCURRENCY = 2;
 
 /** Run `fn` over `items` with at most `n` in flight at once. */
 async function mapPool<T, R>(items: T[], n: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -78,10 +79,10 @@ async function api<T>(path: string, attempt = 0): Promise<T> {
   const res = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
 
   // Spotify rate-limits bursts (common from serverless IPs). Respect Retry-After.
-  if ((res.status === 429 || res.status === 503) && attempt < 4) {
+  if ((res.status === 429 || res.status === 503) && attempt < 5) {
     const retryAfter = Number(res.headers.get("retry-after"));
-    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2 ** attempt * 400;
-    await sleep(Math.min(waitMs, 6000));
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2 ** attempt * 500;
+    await sleep(Math.min(waitMs, 20000));
     return api<T>(path, attempt + 1);
   }
   if (res.status === 404) throw new SpotifyError("Not found on Spotify.", "not_found");
@@ -133,8 +134,18 @@ export async function searchArtists(query: string, limit = 6): Promise<ArtistHit
   }));
 }
 
-/** Pull an artist's catalog from Spotify and map it into our audit model. */
-export async function getArtistCatalog(artistId: string): Promise<Artist> {
+/**
+ * Pull an artist's catalog from Spotify, mapped into our audit model.
+ * Cached per-artist for an hour so repeat views are instant and we don't
+ * burn the app's shared Spotify rate budget re-pulling the same catalog.
+ */
+export function getArtistCatalog(artistId: string): Promise<Artist> {
+  return unstable_cache(() => fetchArtistCatalog(artistId), ["spotify-catalog", artistId], {
+    revalidate: 3600,
+  })();
+}
+
+async function fetchArtistCatalog(artistId: string): Promise<Artist> {
   const artist = await api<SpArtist>(`/artists/${artistId}`);
 
   // 1. Collect albums + singles (paginated).
