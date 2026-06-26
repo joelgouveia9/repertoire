@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, ArrowRight, Search } from "lucide-react";
 import { searchArtists, parseArtistId } from "@/lib/deezer";
 import { CatalogError } from "@/lib/source-util";
-import { listeners } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -74,12 +73,7 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
             <div className="min-w-0 flex-1">
               <div className="truncate text-[15px] font-medium text-white">{a.name}</div>
               <div className="mt-0.5 truncate text-[13px] text-neutral-500">
-                {[
-                  a.fans ? `${listeners(a.fans)} fans` : null,
-                  a.albums ? `${a.albums} release${a.albums > 1 ? "s" : ""}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || "Artist"}
+                {a.albums ? `${a.albums} release${a.albums > 1 ? "s" : ""}` : "Artist"}
               </div>
             </div>
             <ArrowRight className="h-5 w-5 text-neutral-600 transition-transform group-hover:translate-x-0.5 group-hover:text-neutral-300" />
