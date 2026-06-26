@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import type { Artist, Party, Song } from "./types";
 import { estimateAnnualRoyalty } from "./royalty-model";
+import { imageForArtist } from "./artwork";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MusicBrainz catalog source + composition enrichment.
@@ -130,24 +131,29 @@ export interface ArtistHit {
   territory: string;
   disambiguation?: string;
   type?: string;
+  image?: string;
 }
 
 export async function searchArtists(query: string, limit = 8): Promise<ArtistHit[]> {
   const data = await mb<{ artists: (MbArtist & { score?: number })[] }>(
     `/artist?query=${encodeURIComponent(query)}&limit=${limit}&fmt=json`
   );
-  return (data.artists ?? []).map((a) => ({
+  const hits: ArtistHit[] = (data.artists ?? []).map((a) => ({
     id: a.id,
     name: a.name,
     territory: territoryFor(a.country),
     disambiguation: a.disambiguation || a.area?.name,
     type: a.type,
   }));
+  // MusicBrainz drives identity; Spotify supplies artwork — one lookup per artist.
+  const images = await pool(hits, 4, (h) => imageForArtist(h.name));
+  hits.forEach((h, i) => (h.image = images[i] ?? undefined));
+  return hits;
 }
 
 /** Pull an artist's catalog from MusicBrainz, mapped into our audit model. Cached 1h. */
 export function getArtistCatalog(mbid: string): Promise<Artist> {
-  return unstable_cache(() => fetchArtistCatalog(mbid), ["mb-catalog-v2", mbid], { revalidate: 3600 })();
+  return unstable_cache(() => fetchArtistCatalog(mbid), ["mb-catalog-v3", mbid], { revalidate: 3600 })();
 }
 
 /** Fetch one work's ISWC + deduped songwriters. */
@@ -170,6 +176,7 @@ async function fetchWork(workId: string): Promise<{ iswc?: string; writers: Part
 async function fetchArtistCatalog(mbid: string): Promise<Artist> {
   const artist = await mb<MbArtist>(`/artist/${mbid}?fmt=json`);
   const territory = territoryFor(artist.country);
+  const imagePromise = imageForArtist(artist.name); // kicks off in parallel with recordings
 
   // Browse recordings by artist, including ISRCs and the linked composition (work).
   const recordings: MbRecording[] = [];
@@ -239,6 +246,7 @@ async function fetchArtistCatalog(mbid: string): Promise<Artist> {
   return {
     slug: artist.id,
     name: artist.name,
+    image: await imagePromise,
     homeTerritory: territory,
     live: true,
     source: "MusicBrainz",

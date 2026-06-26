@@ -63,8 +63,13 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
             href={`/audit/live/${a.id}`}
             className="group flex items-center gap-4 rounded-xl border border-white/8 bg-white/[0.02] p-3.5 transition-all hover:border-white/15 hover:bg-white/[0.04]"
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-white/10 to-white/5 text-lg font-semibold text-neutral-300 ring-1 ring-white/10">
-              {a.name.charAt(0).toUpperCase()}
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-white/10 to-white/5 text-lg font-semibold text-neutral-300 ring-1 ring-white/10">
+              {a.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={a.image} alt={a.name} className="h-full w-full object-cover" />
+              ) : (
+                a.name.charAt(0).toUpperCase()
+              )}
             </span>
             <div className="min-w-0 flex-1">
               <div className="truncate text-[15px] font-medium text-white">{a.name}</div>
