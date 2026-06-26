@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getArtistCatalog, CatalogError } from "@/lib/musicbrainz";
+import { getArtistCatalog } from "@/lib/deezer";
+import { CatalogError } from "@/lib/source-util";
 import { auditArtist } from "@/lib/audit";
 import { AuditView } from "@/components/AuditView";
 

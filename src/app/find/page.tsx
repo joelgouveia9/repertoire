@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, ArrowRight, Search } from "lucide-react";
-import { searchArtists, parseArtistId, CatalogError } from "@/lib/musicbrainz";
+import { searchArtists, parseArtistId } from "@/lib/deezer";
+import { CatalogError } from "@/lib/source-util";
+import { listeners } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +32,7 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
       </Link>
 
       <h1 className="mt-5 text-2xl font-semibold tracking-tight text-white">Audit a real catalog</h1>
-      <p className="mt-1 text-sm text-neutral-500">
-        Search any artist in the public MusicBrainz catalog — no account needed.
-      </p>
+      <p className="mt-1 text-sm text-neutral-500">Search any artist — we pull their full catalog from streaming.</p>
 
       <form action="/find" method="get" className="mt-6 flex gap-2">
         <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 focus-within:border-emerald-500/50">
@@ -74,7 +74,12 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
             <div className="min-w-0 flex-1">
               <div className="truncate text-[15px] font-medium text-white">{a.name}</div>
               <div className="mt-0.5 truncate text-[13px] text-neutral-500">
-                {[a.type, a.disambiguation, a.territory].filter(Boolean).join(" · ")}
+                {[
+                  a.fans ? `${listeners(a.fans)} fans` : null,
+                  a.albums ? `${a.albums} release${a.albums > 1 ? "s" : ""}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || "Artist"}
               </div>
             </div>
             <ArrowRight className="h-5 w-5 text-neutral-600 transition-transform group-hover:translate-x-0.5 group-hover:text-neutral-300" />

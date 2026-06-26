@@ -11,20 +11,11 @@ import { REGISTRIES, STREAM_LABELS } from "@/lib/registries";
 import type { ArtistAudit, GroundTruthSource, IssueType } from "@/lib/types";
 import { ROYALTY_MODEL_NOTE } from "@/lib/royalty-model";
 import { listeners, money, moneyFull } from "@/lib/format";
+import { ISSUE_TYPE_LABEL } from "@/lib/leak-guide";
 import { HealthRing } from "./HealthRing";
 import { SongScorecard } from "./SongScorecard";
 import { CollectionMap } from "./CollectionMap";
-
-const ISSUE_TYPE_LABEL: Record<IssueType, string> = {
-  unregistered: "Unregistered songs",
-  missing_stream: "Missing royalty streams",
-  no_iswc: "No global work ID (ISWC)",
-  split_mismatch: "Broken splits",
-  party_mismatch: "Wrong rightsholder paid",
-  duplicate: "Duplicate registrations",
-  conflict: "Conflicting claims",
-  unverified: "Unverified registrations",
-};
+import { LeakExplainers } from "./LeakExplainers";
 
 const GROUND_TRUTH_LABEL: Record<GroundTruthSource, { icon: React.ReactNode; label: string }> = {
   distributor: { icon: <Radio className="h-3.5 w-3.5" />, label: "Distributor metadata" },
@@ -125,17 +116,19 @@ export function AuditView({ audit }: { audit: ArtistAudit }) {
         <aside className="flex flex-col gap-6">
           <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-5">
             <h3 className="text-sm font-semibold text-white">Where the money leaks</h3>
-            <p className="mt-0.5 text-[12px] text-neutral-500">Annual exposure by problem type</p>
+            <p className="mt-0.5 text-[12px] text-neutral-500">Annual exposure by problem type — tap to learn how to fix it</p>
             <ul className="mt-4 flex flex-col gap-3">
               {breakdown.map(([type, val]) => (
                 <li key={type}>
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-neutral-300">{ISSUE_TYPE_LABEL[type]}</span>
-                    <span className="font-semibold text-rose-300">{money(val)}</span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/5">
-                    <div className="h-full rounded-full bg-gradient-to-r from-rose-500 to-rose-400" style={{ width: `${(val / maxBreak) * 100}%` }} />
-                  </div>
+                  <a href={`#leak-${type}`} className="group block">
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-neutral-300 group-hover:text-white">{ISSUE_TYPE_LABEL[type]}</span>
+                      <span className="font-semibold text-rose-300">{money(val)}</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/5">
+                      <div className="h-full rounded-full bg-gradient-to-r from-rose-500 to-rose-400" style={{ width: `${(val / maxBreak) * 100}%` }} />
+                    </div>
+                  </a>
                 </li>
               ))}
               {breakdown.length === 0 && <li className="text-[13px] text-emerald-300">No leaks detected 🎉</li>}
@@ -163,6 +156,7 @@ export function AuditView({ audit }: { audit: ArtistAudit }) {
         </aside>
       </div>
 
+      <LeakExplainers audit={audit} />
       <CollectionMap audit={audit} />
     </>
   );
